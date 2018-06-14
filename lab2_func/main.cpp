@@ -14,7 +14,7 @@
 using namespace std;
 
 // Decalare the function to be used
-bool readString(stringstream &lineStream, string &string_name );
+bool readString(stringstream &lineStream, string &string_name, bool can_be_all );
 bool readDouble(stringstream &lineStream, double &double_name );
 bool readInt(stringstream &lineStream, int &int_name );
 bool tooManyArg(stringstream &lineStream);
@@ -36,6 +36,7 @@ void Parser() {
     double r_value;
     int nodeid1, nodeid2;
     bool endloop = false;
+    bool can_be_all;
     
     getline (cin, line);  // Get a line from standard input
     cout << "> ";
@@ -51,7 +52,8 @@ void Parser() {
             while (!endloop){
                 
                 // Read the resistor name and determine if the name is valid
-                if (readString(lineStream, r_name ))
+                can_be_all = false;
+                if (readString(lineStream, r_name, can_be_all ))
                     break;
                 
                 lineStream.clear();
@@ -59,6 +61,7 @@ void Parser() {
                 // Read the resistor value and determine if the value is valid
                 if (readDouble(lineStream, r_value))
                     break;
+                
                 if (r_value<0){
                     cout << "Error: negative resistance" << endl;
                     break;
@@ -69,8 +72,11 @@ void Parser() {
                 // Read the value for nodeid1 and check valid
                 if(readInt(lineStream, nodeid1))
                     break;
-                
-                
+                // Determine whether nodeid1 is in range
+                if(nodeid1 > MAX_NODE_NUMBER || nodeid1 <MIN_NODE_NUMBER){
+                    cout << "Error: node "<< nodeid1 << " is out of permitted range "<< MIN_NODE_NUMBER<<"-"<< MAX_NODE_NUMBER <<endl;
+                    break;
+                }
                 
                 lineStream.clear();
                 
@@ -79,25 +85,13 @@ void Parser() {
                     break;
                 
                 
-                // Determine whether nodeid1 and 2 are in range
-                if(nodeid1 > MAX_NODE_NUMBER || nodeid1 <MIN_NODE_NUMBER){
-                    cout << "Error: node "<< nodeid1 << " is out of permitted range "<< MIN_NODE_NUMBER<<"-"<< MAX_NODE_NUMBER <<endl;
-                    break;
-                }
-                
-                
-                if(nodeid2 > MAX_NODE_NUMBER || nodeid2 < MIN_NODE_NUMBER){
+                // Determine whether nodeid 2 is in range
+                if(nodeid2 > MAX_NODE_NUMBER || nodeid2 <MIN_NODE_NUMBER){
                     cout << "Error: node "<< nodeid2 << " is out of permitted range "<< MIN_NODE_NUMBER<<"-"<< MAX_NODE_NUMBER <<endl;
                     break;
                 }
-                lineStream.clear();
                 
-                // Name of resistor cannot be "all"
-                if (r_name == "all"){
-                    
-                    cout << "Error: resistor name cannot be the keyword \"all\""<< endl;
-                    break;
-                }
+                
                 // Nodeid1 and nodeid2 cannot be equal
                 if (nodeid1==nodeid2){
                     
@@ -115,14 +109,14 @@ void Parser() {
             }
         }
         
-        
-        
-        // to modify the value of an existing R   修改
+        // to modify the value of an existing R  
         else if (command == "modifyR" ) {
             // Create a loop for break
             while (!endloop){
+                
                 // Read the resistor name and check valid
-                if(readString(lineStream, r_name ))
+                can_be_all = false;
+                if(readString(lineStream, r_name, can_be_all ))
                     break;
                 
                 // Read the resistor value and check valid
@@ -134,13 +128,6 @@ void Parser() {
                     cout << "Error: negative resistance"<< endl;
                     break;
                 }
-                
-                // Check whether the resistor name is "all"
-                if (r_name == "all"){
-                    cout << "Error: resistor name cannot be the keyword \"all\""<< endl;
-                    break;
-                }
-                lineStream.clear();
                 
                 // Check if there are too many arguments
                 if (tooManyArg(lineStream))
@@ -159,7 +146,8 @@ void Parser() {
             while(endloop != true){
                 
                 // Read the resistor name and check valid
-                if (readString(lineStream, r_name ))
+                can_be_all = true;
+                if (readString(lineStream, r_name, can_be_all ))
                     break;
                 lineStream.clear();
                 
@@ -176,8 +164,7 @@ void Parser() {
             }
         }
         
-        
-        
+
         // print node
         else if(command == "printNode"){
             // Create while loop for using break
@@ -201,17 +188,19 @@ void Parser() {
         // delete resistor
         else if(command== "deleteR"){
             while(endloop != true){
-                
-                if(readString(lineStream, r_name))
+                can_be_all = true;
+                // Read the resistor name to be deleted and check valid
+                if(readString(lineStream, r_name, can_be_all))
                     break;
                 
                 lineStream.clear();
-                
+                // Check too many arguments
                 if (tooManyArg(lineStream))
                     break;
-                
+                // Check whether the name is all
                 if (r_name != "all")
                     cout << "Deleted: resistor " << r_name << endl;
+                // Output the outcome
                 else cout << "Deleted: all resistors" <<endl ;
                 
                 endloop = true;
@@ -234,10 +223,16 @@ void Parser() {
 
 
 // The function to read string and check valid
-bool readString(stringstream &lineStream, string &string_name ){
+bool readString(stringstream &lineStream, string &string_name, bool can_be_all ){
     bool endloop=false;
     lineStream >> string_name;
-    
+    // Name of resistor cannot be "all"
+    if (string_name == "all" && can_be_all ==false ){
+        
+        cout << "Error: resistor name cannot be the keyword \"all\""<< endl;
+        lineStream.clear();
+        return endloop = true;
+    }
     // if the name is invalid
     if (lineStream.fail()){
         lineStream.clear();
@@ -249,6 +244,7 @@ bool readString(stringstream &lineStream, string &string_name ){
             cout << "Error: too few arguments" << endl;
         endloop = true;
     }
+    lineStream.clear();
     return endloop;
 }
 
@@ -257,18 +253,23 @@ bool readDouble(stringstream &lineStream, double &double_name ){
     bool endloop = false;
     lineStream >> double_name;
     // if fail reading r value
+ 
     if (lineStream.fail()){
         lineStream.clear();
         // Check too few or invalid argument
         if(lineStream.peek()<0){
-            
             cout << "Error: too few arguments"<< endl;
         }
         else
             cout << "Error: invalid argument"<< endl;
-        
-        endloop = true;
+        return endloop = true;
     }
+    // If the int is followed by a invalid char
+    if(lineStream.peek() != 32 && lineStream.peek() !=-1){
+        cout << "Error: invalid argument"<< endl;
+        return endloop = true;
+    }
+    lineStream.clear();
     return endloop;
 }
 
@@ -285,13 +286,18 @@ bool readInt(stringstream &lineStream, int &int_name ){
         else
             cout << "Error: invalid argument"<< endl;
         
-        endloop = true;
+        return endloop = true;
     }
-    
+    // If the int is followed by a invalid char
+    if(lineStream.peek() != 32 && lineStream.peek() !=-1){
+        cout << "Error: invalid argument"<< endl;
+        return endloop = true;
+    }
+    lineStream.clear();
     return endloop;
 }
 
-// The function to detect woo many arguments
+// The function to detect too many arguments
 bool tooManyArg(stringstream &lineStream){
     bool endloop = false;
     // If a space detected after the last valid argument
@@ -301,7 +307,7 @@ bool tooManyArg(stringstream &lineStream){
         lineStream >> test_space;
         if(test_space!=""){
             cout << "Error: too many arguments"<< endl;
-            endloop = true;
+            return endloop = true;
         }
     }
     // If the last int is followed by a invalid char
@@ -309,6 +315,7 @@ bool tooManyArg(stringstream &lineStream){
         cout <<"Error: invalid argument" << endl ;
         endloop = true;
     }
+    lineStream.clear();
     return endloop;
 }
 
@@ -323,7 +330,7 @@ bool readPrintNode(stringstream &lineStream, int &nodeid1){
         // Argument is too few
         if(lineStream.peek()<0){
             cout << "Error: too few arguments"<< endl;
-            endloop = true;
+            return endloop = true;
         }
         // Check whether the failed reading is caused by name "all"
         if(lineStream.peek()>=0){
@@ -343,7 +350,7 @@ bool readPrintNode(stringstream &lineStream, int &nodeid1){
             return endloop;
         }
     }
-    
+
     lineStream.clear();
     // Check whether the nodeid is in range
     if(nodeid1<0 || nodeid1 >5000){
@@ -353,8 +360,4 @@ bool readPrintNode(stringstream &lineStream, int &nodeid1){
     
     return endloop;
 }
-
-
-
-
 
